@@ -7,7 +7,7 @@ Derived from MVP PRD (Phase 1 + Phase 2)
 ## Enums
 
 ```sql
-CREATE TYPE user_role AS ENUM ('provider', 'consumer', 'admin');
+CREATE TYPE user_role AS ENUM ('provider', 'consumer', 'both', 'admin');
 CREATE TYPE api_key_status AS ENUM ('active', 'revoked', 'expired');
 CREATE TYPE provider_status AS ENUM ('active', 'inactive', 'suspended');
 CREATE TYPE endpoint_status AS ENUM ('active', 'inactive');

@@ -56,7 +56,7 @@ Requests do **not** trigger blockchain transactions. Usage is aggregated in the 
 | Gateway | Go (`net/http`, `httputil.ReverseProxy`) |
 | Database | PostgreSQL 16 + Redis 7 |
 | Settlement | Stellar Network (XLM, future USDC) |
-| Dashboard | Next.js, Tailwind CSS, shadcn/ui, React Query |
+| Dashboard | Next.js 15, Tailwind CSS, shadcn/ui, recharts, QRCode.react |
 | Workers | Go background services (polling, timers) |
 | Containerization | Docker Compose |
 | Observability | Prometheus, Grafana, OpenTelemetry |
@@ -86,12 +86,13 @@ flowgate/
 │   ├── wallet/           # Deposit detection, Stellar integration
 │   └── worker/           # Background job scheduling
 ├── migrations/           # 11 goose migration files (sequential)
-├── dashboard/            # Next.js web dashboard (same repo)
+├── dashboard/            # Next.js 15 dashboard (12 pages, dark theme, shadcn/ui)
 ├── deployments/          # Docker Compose files
 ├── docs/                 # PRDs, schema docs, design analysis
 │   ├── flowgate_MVP_PRD.md
 │   ├── mvp_schema.md
 │   ├── mvp_erd.md
+│   ├── ui_spec.md
 │   └── db_design_analysis.md
 └── examples/             # Integration examples
 ```
@@ -119,7 +120,7 @@ erDiagram
 
 | Table | Purpose |
 |---|---|
-| `users` | Core identity, deposit memo, payout address |
+| `users` | Core identity, role (`provider`, `consumer`, or `both`), deposit memo, payout address |
 | `api_keys` | Hashed bearer tokens for auth |
 | `providers` | Upstream API configuration |
 | `api_endpoints` | Routes with fixed per-request pricing |
@@ -131,6 +132,25 @@ erDiagram
 | `settlement_entries` | Per-provider payout line items |
 
 See [`docs/mvp_schema.md`](docs/mvp_schema.md) for full DDL and [`docs/mvp_erd.md`](docs/mvp_erd.md) for the ERD.
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/overview.png" alt="Provider Overview" width="700">
+  <br><em>Provider dashboard — earnings overview, 7-day chart, recent API calls</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/analytics.png" alt="Analytics" width="700">
+  <br><em>Usage analytics — stacked request timeline and endpoint revenue breakdown</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/deposits.png" alt="Deposit" width="700">
+  <br><em>Consumer deposit screen — SEP-7 QR code, address/memo copy, deposit history</em>
+</p>
 
 ---
 
@@ -155,7 +175,7 @@ cd flowgate
 docker compose up -d postgres redis
 
 # Run migrations
-goose -s -dir migrations postgres "postgres://flowgate:flowgate@localhost:5432/flowgate?sslmode=disable" up
+goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/flowgate?sslmode=disable" up
 
 # Generate sqlc code
 cd internal/repository && sqlc generate && cd ../..
@@ -166,6 +186,17 @@ go run ./cmd/gateway
 # Run workers (separate terminal)
 go run ./cmd/worker
 ```
+
+### Dashboard
+
+```bash
+cd dashboard
+npm install
+npm run dev      # → http://localhost:3000
+```
+
+The dashboard runs independently — mock data is used until the Go API is running.  
+Role toggle supports all three options: **Provider**, **Consumer**, or **Both** — the sidebar adapts nav items per role.
 
 ### Configuration
 

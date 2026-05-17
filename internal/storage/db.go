@@ -58,7 +58,7 @@ func RunMigrations(ctx context.Context, pool *pgxpool.Pool) error {
 
 const migrationEnums = `
 DO $$ BEGIN
-    CREATE TYPE user_role AS ENUM ('provider', 'consumer', 'admin');
+    CREATE TYPE user_role AS ENUM ('provider', 'consumer', 'both', 'admin');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 DO $$ BEGIN

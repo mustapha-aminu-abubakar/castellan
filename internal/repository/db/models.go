@@ -452,6 +452,7 @@ type UserRole string
 const (
 	UserRoleProvider UserRole = "provider"
 	UserRoleConsumer UserRole = "consumer"
+	UserRoleBoth     UserRole = "both"
 	UserRoleAdmin    UserRole = "admin"
 )
 

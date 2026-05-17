@@ -23,7 +23,7 @@ The database is not the source of truth for on-chain data. The Stellar network o
 |---|---|---|---|
 | `id` | UUID | PK, `gen_random_uuid()` | Unique identifier |
 | `email` | TEXT | NOT NULL, UNIQUE | Login/identity |
-| `role` | user_role | NOT NULL, DEFAULT 'consumer' | `provider`, `consumer`, or `admin` |
+| `role` | user_role | NOT NULL, DEFAULT 'consumer' | `provider`, `consumer`, `both`, or `admin` |
 | `deposit_memo` | TEXT | UNIQUE | Assigned on first deposit request; used by deposit watcher to route incoming payments |
 | `payout_stellar_address` | TEXT | — | Stellar G-pubkey where provider receives settlements; set in dashboard |
 | `created_at` | TIMESTAMPTZ | NOT NULL | Row creation |
