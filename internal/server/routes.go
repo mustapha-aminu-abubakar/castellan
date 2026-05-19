@@ -2,7 +2,7 @@ package server
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -44,7 +44,9 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, _ *http.Request) {
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		log.Fatalf("error handling JSON marshal. Err: %v", err)
+		slog.Error("error handling JSON marshal", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	_, _ = w.Write(jsonResp)

@@ -473,6 +473,9 @@ linters:
       - path: 'internal/server/server\.go'
         text: 'Magic number'
         linters: [ mnd ]
+      - path: 'cmd/api/main\.go'
+        text: 'Potential hardcoded credentials'
+        linters: [ gosec ]
       - text: 'a blank import should be only in a main or test package'
         linters: [ revive ]
       - text: "parameter '.+' seems to be unused"
