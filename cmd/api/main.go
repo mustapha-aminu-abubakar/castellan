@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"flowgate/internal/server"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
