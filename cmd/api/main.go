@@ -67,12 +67,12 @@ func main() {
 	}
 	defer pool.Close()
 
-	server := server.NewServer(pool)
+	srv := server.NewServer(pool)
 
 	done := make(chan bool, 1)
-	go gracefulShutdown(server, done)
+	go gracefulShutdown(srv, done)
 
-	err = server.ListenAndServe()
+	err = srv.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		panic(fmt.Sprintf("http server error: %s", err))
 	}

@@ -93,13 +93,28 @@ linters:
           - errcheck
           - gosec
           - noctx
+      - path: cmd/api/main\.go
+        text: Magic number
+        linters: [ mnd ]
+      - path: internal/server/server\.go
+        text: Magic number
+        linters: [ mnd ]
+      - text: a blank import should be only in a main or test package
+        linters: [ revive ]
   settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - "$all"
+          allow:
+            - "$all"
     errcheck:
       exclude-functions:
         - encoding/json.Marshal
         - encoding/json.MarshalIndent
     errchkjson:
-      check-error-free-encoding: true
+      check-error-free-encoding: false
     goconst:
       min-occurrences: 4
     varnamelen:

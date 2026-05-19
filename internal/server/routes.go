@@ -38,13 +38,13 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		slog.Error("error handling JSON marshal", "error", err)
+		slog.ErrorContext(r.Context(), "error handling JSON marshal", "error", err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
