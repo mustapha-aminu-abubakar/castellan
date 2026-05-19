@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - master
+      - deploy
 
 env:
   IMAGE_NAME: flowgate

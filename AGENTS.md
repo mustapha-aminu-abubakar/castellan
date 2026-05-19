@@ -35,13 +35,18 @@ goose -s -dir migrations create add_some_table sql
 
 | Workflow | Trigger | What it runs |
 |---|---|---|
-| `lint.yml` | push/PR main | golangci-lint v2.12 matrix |
+| `lint.yml` | push/PR main, push/PR deploy | golangci-lint v2.12 matrix |
 | `unit-testing.yml` | push/PR | `go test -race -count=1 ./...` |
 | `integration-testing.yml` | nightly + manual | `go test -tags=integration ./integration/...` (Postgres service) |
 | `codecov.yml` | push/PR | tests + coverage upload (60% threshold, 5% patch tolerance) |
 | `security.yml` | push/PR | govulncheck + gosec |
 | `trivy.yml` | push/PR | Docker build + Trivy HIGH/CRITICAL |
 | `release.yml` | v* tags | goreleaser (6 platform cross-compile) |
+
+## Workflow
+
+- **`deploy`** is the integration branch — create feature branches from it and open PRs targeting it.
+- **`main`** is write-protected. No one pushes directly. It receives merges from `deploy` when a release is ready.
 
 ## Linting Quirks
 

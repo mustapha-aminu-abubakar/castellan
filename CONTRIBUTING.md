@@ -61,8 +61,8 @@ Environment is loaded automatically via `github.com/joho/godotenv/autoload` — 
 
 ### Branch Strategy
 
-- `main` is the default and release branch. It must always be green.
-- Feature branches should be created from `main` and merged back via pull request.
+- `deploy` is the integration branch. Create feature branches from `deploy` and open pull requests targeting `deploy`.
+- `main` is reserved for release-ready commits. It is write-protected — no one pushes directly to `main`.
 - Branch naming is flexible, but descriptive names are preferred: `feat/rate-limiting`, `fix/settlement-race`, `chore/update-deps`.
 
 ### Commit Messages
@@ -334,7 +334,8 @@ go build ./... && go test ./...
 
 ### Pull Request Checklist
 
-- [ ] Branch is up to date with `main`
+- [ ] Branch is up to date with `deploy`
+- [ ] PR targets the `deploy` branch (not `main`)
 - [ ] `golangci-lint run ./...` passes with zero issues
 - [ ] `go build ./...` compiles
 - [ ] `go test -race -count=1 ./...` passes
@@ -356,8 +357,8 @@ go build ./... && go test ./...
 
 ### After Merge
 
-- The `main` branch triggers the lint, security, trivy, and unit test pipelines.
-- Tagging a commit with `v*` (e.g., `v0.2.0`) triggers a goreleaser release that cross-compiles for 6 platforms (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64).
+- Merging to `deploy` triggers the lint, security, trivy, and unit test pipelines.
+- `deploy` is merged to `main` only when a release is ready. Release is automated: tagging `main` with `v*` (e.g., `v0.2.0`) triggers a goreleaser release that cross-compiles for 6 platforms (linux/amd64, linux/arm64, darwin/amd64, darwin/arm64, windows/amd64, windows/arm64).
 
 ---
 
