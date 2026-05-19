@@ -6,6 +6,8 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://postgresql.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 ![Status](https://img.shields.io/badge/Status-MVP-yellow)
+[![codecov](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate/branch/main/graph/badge.svg)](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate)
+[![codecov](https://codecov.io/gh/your-org/flowgate/branch/main/graph/badge.svg)](https://codecov.io/gh//flowgate)
 
 ---
 
