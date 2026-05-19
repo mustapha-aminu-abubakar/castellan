@@ -1,7 +1,9 @@
 formatters:
   enable:
-    - goimports
     - gofumpt
+  settings:
+    gofumpt:
+      module-path: flowgate
   exclusions:
     generated: lax
     paths:
