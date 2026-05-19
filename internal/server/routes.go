@@ -44,7 +44,7 @@ func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, err := json.Marshal(resp)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "error handling JSON marshal", "error", err)
+		slog.ErrorContext(r.Context(), "error handling JSON marshal", slog.Any("error", err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

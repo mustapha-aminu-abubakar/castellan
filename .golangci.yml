@@ -18,7 +18,6 @@ linters:
     - bidichk
     - bodyclose
     - canonicalheader
-    - depguard
     - containedctx
     - contextcheck
     - copyloopvar
@@ -102,13 +101,6 @@ linters:
       - text: a blank import should be only in a main or test package
         linters: [ revive ]
   settings:
-    depguard:
-      rules:
-        main:
-          files:
-            - "$all"
-          allow:
-            - "$all"
     errcheck:
       exclude-functions:
         - encoding/json.Marshal
