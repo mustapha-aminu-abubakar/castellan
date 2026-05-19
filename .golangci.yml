@@ -1,6 +1,6 @@
 output:
   formats:
-    - format: github-actions
+    github-actions: {}
 
 formatters:
   enable:
