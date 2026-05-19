@@ -19,7 +19,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	return corsWrapper
 }
 
-// CORS middleware
+// CORS middleware.
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// CORS headers
@@ -38,7 +38,7 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) HelloWorldHandler(w http.ResponseWriter, _ *http.Request) {
 	resp := make(map[string]string)
 	resp["message"] = "Hello World"
 
