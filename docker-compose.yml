@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flowgate
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - flowgate
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: api
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      APP_ENV: local
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/flowgate?sslmode=disable"
+    depends_on:
+      - postgres
+    networks:
+      - flowgate
+
+volumes:
+  postgres_data:
+networks:
+  flowgate:
+    driver: bridge
