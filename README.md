@@ -2,12 +2,11 @@
 
 **Usage-based API monetization gateway** — metering, prepaid billing, and Stellar-powered settlement for developers.
 
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go)](https://go.dev)
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go)](https://go.dev)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://postgresql.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 ![Status](https://img.shields.io/badge/Status-MVP-yellow)
 [![codecov](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate/branch/main/graph/badge.svg)](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate)
-[![codecov](https://codecov.io/gh/your-org/flowgate/branch/main/graph/badge.svg)](https://codecov.io/gh//flowgate)
 
 ---
 
@@ -72,32 +71,25 @@ Requests do **not** trigger blockchain transactions. Usage is aggregated in the 
 ```
 flowgate/
 ├── cmd/
-│   ├── gateway/          # Gateway HTTP server entrypoint
-│   └── worker/           # Settlement + deposit worker entrypoint
+│   └── api/              # Gateway HTTP server entrypoint
 ├── internal/
-│   ├── auth/             # API key validation, consumer resolution
-│   ├── gateway/          # Reverse proxy, request lifecycle
-│   ├── ledger/           # Balance management, accounting
-│   ├── metering/         # Usage event creation, aggregation
-│   ├── pricing/          # Route cost resolution
-│   ├── provider/         # Provider registry logic
 │   ├── repository/       # sqlc queries + generated Go code
 │   │   └── query/        # 10 .sql files, 48 queries
-│   ├── settlement/       # Stellar payout batching
-│   ├── storage/          # Database connection, Redis client
-│   ├── wallet/           # Deposit detection, Stellar integration
-│   └── worker/           # Background job scheduling
+│   └── server/           # HTTP server, routes, handlers
 ├── migrations/           # 11 goose migration files (sequential)
 ├── dashboard/            # Next.js 15 dashboard (12 pages, dark theme, shadcn/ui)
-├── deployments/          # Docker Compose files
 ├── docs/                 # PRDs, schema docs, design analysis
 │   ├── flowgate_MVP_PRD.md
 │   ├── mvp_schema.md
 │   ├── mvp_erd.md
 │   ├── ui_spec.md
 │   └── db_design_analysis.md
-└── examples/             # Integration examples
+├── docker-compose.yml    # Postgres, Redis, app services
+├── Dockerfile            # Multi-stage Go build
+└── Makefile              # Build, test, watch targets
 ```
+
+> **Note:** The architecture above describes the target design. Business-logic packages (`auth/`, `ledger/`, `metering/`, `pricing/`, `settlement/`, `wallet/`, `worker/`) are actively being extracted from `internal/server/` as the codebase evolves from MVP toward production.
 
 ---
 
@@ -160,7 +152,7 @@ See [`docs/mvp_schema.md`](docs/mvp_schema.md) for full DDL and [`docs/mvp_erd.m
 
 ### Prerequisites
 
-- Go 1.22+
+- Go 1.26+
 - Docker & Docker Compose
 - PostgreSQL 16 (or via Docker)
 - Redis 7 (or via Docker)
@@ -170,7 +162,7 @@ See [`docs/mvp_schema.md`](docs/mvp_schema.md) for full DDL and [`docs/mvp_erd.m
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/flowgate.git
+git clone https://github.com/mustapha-aminu-abubakar/flowgate.git
 cd flowgate
 
 # Start infrastructure
@@ -179,14 +171,8 @@ docker compose up -d postgres redis
 # Run migrations
 goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/flowgate?sslmode=disable" up
 
-# Generate sqlc code
-cd internal/repository && sqlc generate && cd ../..
-
 # Build and run gateway
-go run ./cmd/gateway
-
-# Run workers (separate terminal)
-go run ./cmd/worker
+go run ./cmd/api
 ```
 
 ### Dashboard
@@ -206,7 +192,7 @@ Environment variables (or `.env` file):
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgres://flowgate:flowgate@localhost:5432/flowgate` | PostgreSQL connection |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/flowgate` | PostgreSQL connection |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
 | `STELLAR_HORIZON` | `https://horizon-testnet.stellar.org` | Stellar network endpoint |
 | `GATEWAY_PORT` | `8080` | Gateway HTTP port |
