@@ -5,16 +5,24 @@ import (
 	"log/slog"
 	"net/http"
 
+	"flowgate/internal/repository/db"
+
 	"github.com/julienschmidt/httprouter"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := httprouter.New()
+	h := NewHandlers(repository.New(s.pool))
 
 	// Wrap all routes with CORS middleware
 	corsWrapper := s.corsMiddleware(r)
 
 	r.HandlerFunc(http.MethodGet, "/", s.HelloWorldHandler)
+
+	r.HandlerFunc(http.MethodPost, "/api/v1/providers", h.CreateProvider)
+	r.HandlerFunc(http.MethodGet, "/api/v1/providers", h.ListProviders)
+	r.HandlerFunc(http.MethodGet, "/api/v1/providers/:id", h.GetProvider)
+	r.HandlerFunc(http.MethodPatch, "/api/v1/providers/:id", h.UpdateProvider)
 
 	return corsWrapper
 }
