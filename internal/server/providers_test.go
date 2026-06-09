@@ -68,9 +68,11 @@ func validTestAddress() string {
 }
 
 const (
-	baseURLKey     = "base_url"
-	stellarAddrKey = "payout_stellar_address"
-	updatedAPIName = "Updated API"
+	baseURLKey       = "base_url"
+	stellarAddrKey   = "payout_stellar_address"
+	updatedAPIName   = "Updated API"
+	testProviderName = "My API"
+	testBaseURL      = "https://api.example.com"
 )
 
 var (
@@ -102,8 +104,8 @@ func TestCreateProvider_Success(t *testing.T) {
 
 	body := map[string]string{
 		"owner_id":     testOwnerID.String(),
-		"name":         "My API",
-		baseURLKey:     "https://api.example.com",
+		"name":         testProviderName,
+		baseURLKey:     testBaseURL,
 		stellarAddrKey: testAddr,
 	}
 	reqBody, err := json.Marshal(body)
@@ -128,7 +130,7 @@ func TestCreateProvider_Success(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&provider); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if provider.Name != "My API" {
+	if provider.Name != testProviderName {
 		t.Errorf("expected name 'My API', got %q", provider.Name)
 	}
 	if provider.Status != repository.ProviderStatusActive {
@@ -179,8 +181,8 @@ func TestCreateProvider_InvalidStellarAddress(t *testing.T) {
 
 	body := map[string]string{
 		"owner_id":     testOwnerID.String(),
-		"name":         "My API",
-		baseURLKey:     "https://api.example.com",
+		"name":         testProviderName,
+		baseURLKey:     testBaseURL,
 		stellarAddrKey: "not-a-stellar-address",
 	}
 	reqBody, err := json.Marshal(body)
@@ -207,8 +209,8 @@ func TestGetProvider_Success(t *testing.T) {
 			return repository.GetProviderByIDRow{
 				ID:      id,
 				OwnerID: testOwnerID,
-				Name:    "My API",
-				BaseUrl: "https://api.example.com",
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
 				Status:  repository.ProviderStatusActive,
 			}, nil
 		},
@@ -231,7 +233,7 @@ func TestGetProvider_Success(t *testing.T) {
 	if err := json.NewDecoder(resp.Body).Decode(&row); err != nil {
 		t.Fatalf("failed to decode: %v", err)
 	}
-	if row.Name != "My API" {
+	if row.Name != testProviderName {
 		t.Errorf("expected name 'My API', got %q", row.Name)
 	}
 }
@@ -279,8 +281,8 @@ func TestListProviders_Success(t *testing.T) {
 		{
 			ID:        testProvID,
 			OwnerID:   testOwnerID,
-			Name:      "My API",
-			BaseUrl:   "https://api.example.com",
+			Name:      testProviderName,
+			BaseUrl:   testBaseURL,
 			Status:    repository.ProviderStatusActive,
 			CreatedAt: testTime,
 			UpdatedAt: testTime,
@@ -312,7 +314,7 @@ func TestListProviders_Success(t *testing.T) {
 	if len(providers) != 1 {
 		t.Errorf("expected 1 provider, got %d", len(providers))
 	}
-	if providers[0].Name != "My API" {
+	if providers[0].Name != testProviderName {
 		t.Errorf("expected name 'My API', got %q", providers[0].Name)
 	}
 }
@@ -366,8 +368,8 @@ func TestUpdateProvider_Success(t *testing.T) {
 			return repository.GetProviderByIDRow{
 				ID:      id,
 				OwnerID: testOwnerID,
-				Name:    "My API",
-				BaseUrl: "https://api.example.com",
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
 				Status:  repository.ProviderStatusActive,
 			}, nil
 		},
@@ -375,7 +377,7 @@ func TestUpdateProvider_Success(t *testing.T) {
 			if arg.Name != updatedAPIName {
 				t.Errorf("expected name 'Updated API', got %q", arg.Name)
 			}
-			if arg.BaseUrl != "https://api.example.com" {
+			if arg.BaseUrl != testBaseURL {
 				t.Errorf("expected base_url preserved, got %q", arg.BaseUrl)
 			}
 			return nil
@@ -409,8 +411,8 @@ func TestUpdateProvider_WithStellarAddress(t *testing.T) {
 			return repository.GetProviderByIDRow{
 				ID:      id,
 				OwnerID: testOwnerID,
-				Name:    "My API",
-				BaseUrl: "https://api.example.com",
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
 				Status:  repository.ProviderStatusActive,
 			}, nil
 		},
@@ -452,8 +454,8 @@ func TestUpdateProvider_InvalidStellarAddress(t *testing.T) {
 			return repository.GetProviderByIDRow{
 				ID:      id,
 				OwnerID: testOwnerID,
-				Name:    "My API",
-				BaseUrl: "https://api.example.com",
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
 				Status:  repository.ProviderStatusActive,
 			}, nil
 		},
