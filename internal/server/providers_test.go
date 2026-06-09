@@ -510,6 +510,407 @@ func TestUpdateProvider_NotFound(t *testing.T) {
 	}
 }
 
+func TestValidProviderStatus(t *testing.T) {
+	tests := []struct {
+		name   string
+		status string
+		valid  bool
+	}{
+		{"active", "active", true},
+		{"inactive", "inactive", true},
+		{"suspended", "suspended", true},
+		{"bogus", "bogus", false},
+		{"empty", "", false},
+		{"mixed case", "Active", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := validProviderStatus(tt.status); got != tt.valid {
+				t.Errorf("validProviderStatus(%q) = %v, want %v", tt.status, got, tt.valid)
+			}
+		})
+	}
+}
+
+func TestWriteJSON_EncodeError(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeJSON(w, http.StatusOK, make(chan int))
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateProvider_InvalidJSON(t *testing.T) {
+	mock := &mockQuerier{}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader([]byte(`{invalid}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateProvider_InvalidOwnerID(t *testing.T) {
+	mock := &mockQuerier{}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{
+		"owner_id":     "not-a-uuid",
+		"name":         testProviderName,
+		baseURLKey:     testBaseURL,
+		stellarAddrKey: testAddr,
+	}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateProvider_DBError(t *testing.T) {
+	mock := &mockQuerier{
+		createProviderFn: func(_ context.Context, _ repository.CreateProviderParams) (repository.Provider, error) {
+			return repository.Provider{}, pgx.ErrNoRows
+		},
+		updateUserPayoutAddressFn: func(_ context.Context, _ repository.UpdateUserPayoutAddressParams) error {
+			return nil
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{
+		"owner_id":     testOwnerID.String(),
+		"name":         testProviderName,
+		baseURLKey:     testBaseURL,
+		stellarAddrKey: testAddr,
+	}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateProvider_PayoutError(t *testing.T) {
+	mock := &mockQuerier{
+		createProviderFn: func(_ context.Context, arg repository.CreateProviderParams) (repository.Provider, error) {
+			return repository.Provider{
+				ID:        testProvID,
+				OwnerID:   arg.OwnerID,
+				Name:      arg.Name,
+				BaseUrl:   arg.BaseUrl,
+				Status:    repository.ProviderStatusActive,
+				CreatedAt: testTime,
+				UpdatedAt: testTime,
+			}, nil
+		},
+		updateUserPayoutAddressFn: func(_ context.Context, _ repository.UpdateUserPayoutAddressParams) error {
+			return pgx.ErrNoRows
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{
+		"owner_id":     testOwnerID.String(),
+		"name":         testProviderName,
+		baseURLKey:     testBaseURL,
+		stellarAddrKey: testAddr,
+	}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestGetProvider_DBError(t *testing.T) {
+	mock := &mockQuerier{
+		getProviderByIDFn: func(_ context.Context, _ uuid.UUID) (repository.GetProviderByIDRow, error) {
+			return repository.GetProviderByIDRow{}, pgx.ErrTxClosed
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers/"+testProvID.String(), nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestListProviders_InvalidOwnerID(t *testing.T) {
+	mock := &mockQuerier{}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers?owner_id=not-a-uuid", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestListProviders_DBError(t *testing.T) {
+	mock := &mockQuerier{
+		listProvidersByOwnerFn: func(_ context.Context, _ uuid.UUID) ([]repository.Provider, error) {
+			return nil, pgx.ErrTxClosed
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers?owner_id="+testOwnerID.String(), nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_InvalidID(t *testing.T) {
+	mock := &mockQuerier{}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{"name": updatedAPIName}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/not-a-uuid", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_InvalidJSON(t *testing.T) {
+	mock := &mockQuerier{}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader([]byte(`{invalid}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_GetDBError(t *testing.T) {
+	mock := &mockQuerier{
+		getProviderByIDFn: func(_ context.Context, _ uuid.UUID) (repository.GetProviderByIDRow, error) {
+			return repository.GetProviderByIDRow{}, pgx.ErrTxClosed
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{"name": updatedAPIName}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_InvalidStatus(t *testing.T) {
+	mock := &mockQuerier{
+		getProviderByIDFn: func(_ context.Context, id uuid.UUID) (repository.GetProviderByIDRow, error) {
+			return repository.GetProviderByIDRow{
+				ID:      id,
+				OwnerID: testOwnerID,
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
+				Status:  repository.ProviderStatusActive,
+			}, nil
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{"status": "bogus"}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_UpdateError(t *testing.T) {
+	mock := &mockQuerier{
+		getProviderByIDFn: func(_ context.Context, id uuid.UUID) (repository.GetProviderByIDRow, error) {
+			return repository.GetProviderByIDRow{
+				ID:      id,
+				OwnerID: testOwnerID,
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
+				Status:  repository.ProviderStatusActive,
+			}, nil
+		},
+		updateProviderFn: func(_ context.Context, _ repository.UpdateProviderParams) error {
+			return pgx.ErrNoRows
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{"name": updatedAPIName}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateProvider_PayoutUpdateError(t *testing.T) {
+	mock := &mockQuerier{
+		getProviderByIDFn: func(_ context.Context, id uuid.UUID) (repository.GetProviderByIDRow, error) {
+			return repository.GetProviderByIDRow{
+				ID:      id,
+				OwnerID: testOwnerID,
+				Name:    testProviderName,
+				BaseUrl: testBaseURL,
+				Status:  repository.ProviderStatusActive,
+			}, nil
+		},
+		updateProviderFn: func(_ context.Context, _ repository.UpdateProviderParams) error {
+			return nil
+		},
+		updateUserPayoutAddressFn: func(_ context.Context, _ repository.UpdateUserPayoutAddressParams) error {
+			return pgx.ErrNoRows
+		},
+	}
+	h := NewHandlers(mock, nil)
+	router := testRouter(h)
+
+	body := map[string]string{stellarAddrKey: testAddr}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("expected 500, got %d", resp.StatusCode)
+	}
+}
+
 func TestValidateStellarAddress(t *testing.T) {
 	tests := []struct {
 		name  string

@@ -1,0 +1,526 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>server: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">flowgate/internal/server/handlers.go (58.3%)</option>
+				
+				<option value="file1">flowgate/internal/server/providers.go (59.3%)</option>
+				
+				<option value="file2">flowgate/internal/server/routes.go (19.2%)</option>
+				
+				<option value="file3">flowgate/internal/server/server.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package server
+
+import (
+        "bytes"
+        "encoding/json"
+        "log/slog"
+        "net/http"
+
+        "flowgate/internal/repository/db"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Handlers struct {
+        q    repository.Querier
+        pool *pgxpool.Pool
+}
+
+func NewHandlers(q repository.Querier, pool *pgxpool.Pool) *Handlers <span class="cov8" title="1">{
+        return &amp;Handlers{q: q, pool: pool}
+}</span>
+
+func writeJSON(w http.ResponseWriter, status int, v any) <span class="cov8" title="1">{
+        var buf bytes.Buffer
+        if err := json.NewEncoder(&amp;buf).Encode(v); err != nil </span><span class="cov0" title="0">{
+                slog.Error("failed to encode JSON response", slog.Any("error", err))
+                w.Header().Set("Content-Type", "application/json")
+                w.WriteHeader(http.StatusInternalServerError)
+                _, _ = w.Write([]byte(`{"error":"internal server error"}`))
+                return
+        }</span>
+        <span class="cov8" title="1">w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        _, _ = w.Write(buf.Bytes())</span>
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) <span class="cov8" title="1">{
+        writeJSON(w, status, map[string]string{"error": msg})
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package server
+
+import (
+        "context"
+        "encoding/base32"
+        "encoding/json"
+        "errors"
+        "log/slog"
+        "net/http"
+
+        "flowgate/internal/repository/db"
+
+        "github.com/google/uuid"
+        "github.com/jackc/pgx/v5"
+        "github.com/jackc/pgx/v5/pgtype"
+        "github.com/julienschmidt/httprouter"
+)
+
+func (h *Handlers) CreateProvider(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        var input struct {
+                OwnerID              string `json:"owner_id"`
+                Name                 string `json:"name"`
+                BaseURL              string `json:"base_url"`
+                PayoutStellarAddress string `json:"payout_stellar_address"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&amp;input); err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "invalid request body", slog.Any("error", err))
+                writeError(w, http.StatusBadRequest, "invalid JSON body")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if input.OwnerID == "" || input.Name == "" || input.BaseURL == "" || input.PayoutStellarAddress == "" </span><span class="cov8" title="1">{
+                writeError(w, http.StatusBadRequest, "owner_id, name, base_url, and payout_stellar_address are required")
+                return
+        }</span>
+
+        <span class="cov8" title="1">ownerID, err := uuid.Parse(input.OwnerID)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusBadRequest, "invalid owner_id: must be a valid UUID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if !validateStellarAddress(input.PayoutStellarAddress) </span><span class="cov8" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid payout_stellar_address: must be a valid Stellar ed25519 public key")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var commit func(context.Context) error
+        qtx := h.q
+        if h.pool != nil </span><span class="cov0" title="0">{
+                tx, err := h.pool.Begin(r.Context())
+                if err != nil </span><span class="cov0" title="0">{
+                        slog.ErrorContext(r.Context(), "failed to begin transaction", slog.Any("error", err))
+                        writeError(w, http.StatusInternalServerError, "failed to create provider")
+                        return
+                }</span>
+                <span class="cov0" title="0">defer tx.Rollback(r.Context())
+                qtx = repository.New(tx)
+                commit = tx.Commit</span>
+        }
+
+        <span class="cov8" title="1">provider, err := qtx.CreateProvider(r.Context(), repository.CreateProviderParams{
+                OwnerID: ownerID,
+                Name:    input.Name,
+                BaseUrl: input.BaseURL,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "failed to create provider", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to create provider")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := qtx.UpdateUserPayoutAddress(r.Context(), repository.UpdateUserPayoutAddressParams{
+                ID:                   ownerID,
+                PayoutStellarAddress: pgtype.Text{String: input.PayoutStellarAddress, Valid: true},
+        }); err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "failed to update payout address", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to update payout address")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if commit != nil </span><span class="cov0" title="0">{
+                if err := commit(r.Context()); err != nil </span><span class="cov0" title="0">{
+                        slog.ErrorContext(r.Context(), "failed to commit transaction", slog.Any("error", err))
+                        writeError(w, http.StatusInternalServerError, "failed to create provider")
+                        return
+                }</span>
+        }
+
+        <span class="cov8" title="1">slog.DebugContext(r.Context(), "provider created", slog.String("provider_id", provider.ID.String()))
+        writeJSON(w, http.StatusCreated, provider)</span>
+}
+
+func (h *Handlers) GetProvider(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        params := httprouter.ParamsFromContext(r.Context())
+        providerID, err := uuid.Parse(params.ByName("id"))
+        if err != nil </span><span class="cov8" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid provider ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">provider, err := h.q.GetProviderByID(r.Context(), providerID)
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, pgx.ErrNoRows) </span><span class="cov8" title="1">{
+                        writeError(w, http.StatusNotFound, "provider not found")
+                        return
+                }</span>
+                <span class="cov0" title="0">slog.ErrorContext(r.Context(), "failed to get provider", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to get provider")
+                return</span>
+        }
+
+        <span class="cov8" title="1">writeJSON(w, http.StatusOK, provider)</span>
+}
+
+func (h *Handlers) ListProviders(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        ownerIDStr := r.URL.Query().Get("owner_id")
+        if ownerIDStr == "" </span><span class="cov8" title="1">{
+                writeError(w, http.StatusBadRequest, "owner_id query parameter is required")
+                return
+        }</span>
+
+        <span class="cov8" title="1">ownerID, err := uuid.Parse(ownerIDStr)
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusBadRequest, "invalid owner_id")
+                return
+        }</span>
+
+        <span class="cov8" title="1">providers, err := h.q.ListProvidersByOwner(r.Context(), ownerID)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "failed to list providers", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to list providers")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if providers == nil </span><span class="cov8" title="1">{
+                providers = []repository.Provider{}
+        }</span>
+
+        <span class="cov8" title="1">writeJSON(w, http.StatusOK, providers)</span>
+}
+
+func (h *Handlers) UpdateProvider(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        params := httprouter.ParamsFromContext(r.Context())
+        providerID, err := uuid.Parse(params.ByName("id"))
+        if err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusBadRequest, "invalid provider ID")
+                return
+        }</span>
+
+        <span class="cov8" title="1">var input struct {
+                Name                 *string `json:"name,omitempty"`
+                BaseURL              *string `json:"base_url,omitempty"`
+                Status               *string `json:"status,omitempty"`
+                PayoutStellarAddress *string `json:"payout_stellar_address,omitempty"`
+        }
+        if err := json.NewDecoder(r.Body).Decode(&amp;input); err != nil </span><span class="cov0" title="0">{
+                writeError(w, http.StatusBadRequest, "invalid JSON body")
+                return
+        }</span>
+
+        <span class="cov8" title="1">existing, err := h.q.GetProviderByID(r.Context(), providerID)
+        if err != nil </span><span class="cov8" title="1">{
+                if errors.Is(err, pgx.ErrNoRows) </span><span class="cov8" title="1">{
+                        writeError(w, http.StatusNotFound, "provider not found")
+                        return
+                }</span>
+                <span class="cov0" title="0">slog.ErrorContext(r.Context(), "failed to get provider", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to get provider")
+                return</span>
+        }
+
+        <span class="cov8" title="1">name := existing.Name
+        baseURL := existing.BaseUrl
+        status := existing.Status
+        if input.Name != nil </span><span class="cov8" title="1">{
+                name = *input.Name
+        }</span>
+        <span class="cov8" title="1">if input.BaseURL != nil </span><span class="cov0" title="0">{
+                baseURL = *input.BaseURL
+        }</span>
+        <span class="cov8" title="1">if input.Status != nil </span><span class="cov0" title="0">{
+                if !validProviderStatus(*input.Status) </span><span class="cov0" title="0">{
+                        writeError(w, http.StatusBadRequest, "invalid status: must be one of active, inactive, suspended")
+                        return
+                }</span>
+                <span class="cov0" title="0">status = repository.ProviderStatus(*input.Status)</span>
+        }
+
+        <span class="cov8" title="1">if input.PayoutStellarAddress != nil &amp;&amp; !validateStellarAddress(*input.PayoutStellarAddress) </span><span class="cov8" title="1">{
+                writeError(w, http.StatusBadRequest, "invalid payout_stellar_address: must be a valid Stellar ed25519 public key")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if err := h.q.UpdateProvider(r.Context(), repository.UpdateProviderParams{
+                ID:      providerID,
+                Name:    name,
+                BaseUrl: baseURL,
+                Status:  status,
+                OwnerID: existing.OwnerID,
+        }); err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "failed to update provider", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to update provider")
+                return
+        }</span>
+
+        <span class="cov8" title="1">if input.PayoutStellarAddress != nil </span><span class="cov8" title="1">{
+                if err := h.q.UpdateUserPayoutAddress(r.Context(), repository.UpdateUserPayoutAddressParams{
+                        ID:                   existing.OwnerID,
+                        PayoutStellarAddress: pgtype.Text{String: *input.PayoutStellarAddress, Valid: true},
+                }); err != nil </span><span class="cov0" title="0">{
+                        slog.ErrorContext(r.Context(), "failed to update payout address", slog.Any("error", err))
+                        writeError(w, http.StatusInternalServerError, "failed to update payout address")
+                        return
+                }</span>
+        }
+
+        <span class="cov8" title="1">updated, err := h.q.GetProviderByID(r.Context(), providerID)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "failed to get updated provider", slog.Any("error", err))
+                writeError(w, http.StatusInternalServerError, "failed to get updated provider")
+                return
+        }</span>
+
+        <span class="cov8" title="1">writeJSON(w, http.StatusOK, updated)</span>
+}
+
+const (
+        stellarVersionByte = 0x30
+        crcPolynomial      = 0x1021
+)
+
+func validateStellarAddress(addr string) bool <span class="cov8" title="1">{
+        const expectedLen = 56
+        if len(addr) != expectedLen || addr[0] != 'G' </span><span class="cov8" title="1">{
+                return false
+        }</span>
+
+        <span class="cov8" title="1">decoded, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(addr)
+        if err != nil || len(decoded) != 35 </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov8" title="1">if decoded[0] != stellarVersionByte </span><span class="cov0" title="0">{
+                return false
+        }</span>
+
+        <span class="cov8" title="1">checksum := uint16(decoded[33])&lt;&lt;8 | uint16(decoded[34])
+        return crc16XModem(decoded[:33]) == checksum</span>
+}
+
+func validProviderStatus(s string) bool <span class="cov0" title="0">{
+        switch s </span>{
+        case string(repository.ProviderStatusActive),
+                string(repository.ProviderStatusInactive),
+                string(repository.ProviderStatusSuspended):<span class="cov0" title="0">
+                return true</span>
+        default:<span class="cov0" title="0">
+                return false</span>
+        }
+}
+
+func crc16XModem(data []byte) uint16 <span class="cov8" title="1">{
+        var crc uint16
+        for _, b := range data </span><span class="cov8" title="1">{
+                crc ^= uint16(b) &lt;&lt; 8
+                for range 8 </span><span class="cov8" title="1">{
+                        if crc&amp;0x8000 != 0 </span><span class="cov8" title="1">{
+                                crc = (crc &lt;&lt; 1) ^ crcPolynomial
+                        }</span> else<span class="cov8" title="1"> {
+                                crc &lt;&lt;= 1
+                        }</span>
+                }
+        }
+        <span class="cov8" title="1">return crc</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package server
+
+import (
+        "encoding/json"
+        "log/slog"
+        "net/http"
+
+        "flowgate/internal/repository/db"
+
+        "github.com/julienschmidt/httprouter"
+)
+
+func (s *Server) RegisterRoutes() http.Handler <span class="cov0" title="0">{
+        r := httprouter.New()
+        h := NewHandlers(repository.New(s.pool), s.pool)
+
+        // Wrap all routes with CORS middleware
+        corsWrapper := s.corsMiddleware(r)
+
+        r.HandlerFunc(http.MethodGet, "/", s.HelloWorldHandler)
+
+        r.HandlerFunc(http.MethodPost, "/api/v1/providers", h.CreateProvider)
+        r.HandlerFunc(http.MethodGet, "/api/v1/providers", h.ListProviders)
+        r.HandlerFunc(http.MethodGet, "/api/v1/providers/:id", h.GetProvider)
+        r.HandlerFunc(http.MethodPatch, "/api/v1/providers/:id", h.UpdateProvider)
+
+        return corsWrapper
+}</span>
+
+// CORS middleware.
+func (s *Server) corsMiddleware(next http.Handler) http.Handler <span class="cov0" title="0">{
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) </span><span class="cov0" title="0">{
+                // CORS headers
+                w.Header().Set("Access-Control-Allow-Origin", "*") // Use "*" for all origins, or replace with specific origins
+                w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+                w.Header().Set("Access-Control-Allow-Headers", "Accept, Authorization, Content-Type, X-CSRF-Token")
+                w.Header().Set("Access-Control-Allow-Credentials", "false") // Set to "true" if credentials are needed
+
+                // Handle preflight OPTIONS requests
+                if r.Method == http.MethodOptions </span><span class="cov0" title="0">{
+                        w.WriteHeader(http.StatusNoContent)
+                        return
+                }</span>
+
+                <span class="cov0" title="0">next.ServeHTTP(w, r)</span>
+        })
+}
+
+func (s *Server) HelloWorldHandler(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        resp := make(map[string]string)
+        resp["message"] = "Hello World"
+
+        jsonResp, err := json.Marshal(resp)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.ErrorContext(r.Context(), "error handling JSON marshal", slog.Any("error", err))
+                http.Error(w, "internal server error", http.StatusInternalServerError)
+                return
+        }</span>
+
+        <span class="cov8" title="1">_, _ = w.Write(jsonResp)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package server
+
+import (
+        "fmt"
+        "net/http"
+        "os"
+        "strconv"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+        _ "github.com/joho/godotenv/autoload"
+)
+
+type Server struct {
+        port int
+        pool *pgxpool.Pool
+}
+
+func NewServer(pool *pgxpool.Pool) *http.Server <span class="cov0" title="0">{
+        port, _ := strconv.Atoi(os.Getenv("PORT"))
+        srv := &amp;Server{
+                port: port,
+                pool: pool,
+        }
+
+        server := &amp;http.Server{
+                Addr:         fmt.Sprintf(":%d", srv.port),
+                Handler:      srv.RegisterRoutes(),
+                IdleTimeout:  time.Minute,
+                ReadTimeout:  10 * time.Second,
+                WriteTimeout: 30 * time.Second,
+        }
+
+        return server
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
