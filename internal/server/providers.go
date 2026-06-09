@@ -180,6 +180,10 @@ func (h *Handlers) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 		baseURL = *input.BaseURL
 	}
 	if input.Status != nil {
+		if !validProviderStatus(*input.Status) {
+			writeError(w, http.StatusBadRequest, "invalid status: must be one of active, inactive, suspended")
+			return
+		}
 		status = repository.ProviderStatus(*input.Status)
 	}
 
@@ -243,6 +247,17 @@ func validateStellarAddress(addr string) bool {
 
 	checksum := uint16(decoded[33])<<8 | uint16(decoded[34])
 	return crc16XModem(decoded[:33]) == checksum
+}
+
+func validProviderStatus(s string) bool {
+	switch s {
+	case string(repository.ProviderStatusActive),
+		string(repository.ProviderStatusInactive),
+		string(repository.ProviderStatusSuspended):
+		return true
+	default:
+		return false
+	}
 }
 
 func crc16XModem(data []byte) uint16 {
