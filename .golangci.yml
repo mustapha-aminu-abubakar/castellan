@@ -101,7 +101,7 @@ linters:
         text: Magic number
         linters: [ mnd ]
       - path: internal/server/providers\.go
-        text: Magic number: 8
+        text: "Magic number: 8"
         linters: [ mnd ]
       - text: a blank import should be only in a main or test package
         linters: [ revive ]
