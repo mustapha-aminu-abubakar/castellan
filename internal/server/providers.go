@@ -226,8 +226,8 @@ func (h *Handlers) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 }
 
 const (
-	stellarVersionByte byte = 0x30
-	crcPolynomial           = 0x1021
+	stellarVersionByte = 0x30
+	crcPolynomial      = 0x1021
 )
 
 func validateStellarAddress(addr string) bool {
