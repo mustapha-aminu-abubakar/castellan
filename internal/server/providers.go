@@ -54,7 +54,7 @@ func (h *Handlers) CreateProvider(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "failed to create provider")
 			return
 		}
-		defer func() { _ = tx.Rollback(r.Context()) }()
+		defer tx.Rollback(r.Context())
 		qtx = repository.New(tx)
 		commit = tx.Commit
 	}
@@ -228,7 +228,6 @@ func (h *Handlers) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 const (
 	stellarVersionByte byte = 0x30
 	crcPolynomial           = 0x1021
-	crcShiftBits            = 8
 )
 
 func validateStellarAddress(addr string) bool {
@@ -246,7 +245,7 @@ func validateStellarAddress(addr string) bool {
 		return false
 	}
 
-	checksum := uint16(decoded[33])<<crcShiftBits | uint16(decoded[34])
+	checksum := uint16(decoded[33])<<8 | uint16(decoded[34])
 	return crc16XModem(decoded[:33]) == checksum
 }
 
@@ -264,7 +263,7 @@ func validProviderStatus(s string) bool {
 func crc16XModem(data []byte) uint16 {
 	var crc uint16
 	for _, b := range data {
-		crc ^= uint16(b) << crcShiftBits
+		crc ^= uint16(b) << 8
 		for range 8 {
 			if crc&0x8000 != 0 {
 				crc = (crc << 1) ^ crcPolynomial
