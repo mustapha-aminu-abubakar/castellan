@@ -198,6 +198,11 @@ func (h *Handlers) UpdateProvider(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, updated)
 }
 
+const (
+	stellarVersionByte = 0x30
+	crcPolynomial      = 0x1021
+)
+
 func validateStellarAddress(addr string) bool {
 	const expectedLen = 56
 	if len(addr) != expectedLen || addr[0] != 'G' {
@@ -209,7 +214,7 @@ func validateStellarAddress(addr string) bool {
 		return false
 	}
 
-	if decoded[0] != 0x30 {
+	if decoded[0] != stellarVersionByte {
 		return false
 	}
 
@@ -221,9 +226,9 @@ func crc16XModem(data []byte) uint16 {
 	var crc uint16
 	for _, b := range data {
 		crc ^= uint16(b) << 8
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			if crc&0x8000 != 0 {
-				crc = (crc << 1) ^ 0x1021
+				crc = (crc << 1) ^ crcPolynomial
 			} else {
 				crc <<= 1
 			}

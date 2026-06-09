@@ -57,15 +57,21 @@ func testRouter(h *Handlers) http.Handler {
 }
 
 func validTestAddress() string {
-	payload := make([]byte, 33)
-	payload[0] = 0x30
+	payload := make([]byte, 33, 35)
+	payload[0] = stellarVersionByte
 	for i := 1; i < 33; i++ {
 		payload[i] = byte(i)
 	}
 	c := crc16XModem(payload)
-	full := append(payload, byte(c>>8), byte(c))
-	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(full)
+	payload = append(payload, byte(c>>8), byte(c))
+	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(payload)
 }
+
+const (
+	baseURLKey     = "base_url"
+	stellarAddrKey = "payout_stellar_address"
+	updatedAPIName = "Updated API"
+)
 
 var (
 	testOwnerID = uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
@@ -95,12 +101,15 @@ func TestCreateProvider_Success(t *testing.T) {
 	router := testRouter(h)
 
 	body := map[string]string{
-		"owner_id":               testOwnerID.String(),
-		"name":                   "My API",
-		"base_url":               "https://api.example.com",
-		"payout_stellar_address": testAddr,
+		"owner_id":     testOwnerID.String(),
+		"name":         "My API",
+		baseURLKey:     "https://api.example.com",
+		stellarAddrKey: testAddr,
 	}
-	reqBody, _ := json.Marshal(body)
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -136,15 +145,18 @@ func TestCreateProvider_MissingFields(t *testing.T) {
 		name string
 		body map[string]string
 	}{
-		{"missing owner_id", map[string]string{"name": "x", "base_url": "x", "payout_stellar_address": "G"}},
-		{"missing name", map[string]string{"owner_id": testOwnerID.String(), "base_url": "x", "payout_stellar_address": "G"}},
-		{"missing base_url", map[string]string{"owner_id": testOwnerID.String(), "name": "x", "payout_stellar_address": "G"}},
-		{"missing payout", map[string]string{"owner_id": testOwnerID.String(), "name": "x", "base_url": "x"}},
+		{"missing owner_id", map[string]string{"name": "x", baseURLKey: "x", stellarAddrKey: "G"}},
+		{"missing name", map[string]string{"owner_id": testOwnerID.String(), baseURLKey: "x", stellarAddrKey: "G"}},
+		{"missing base_url", map[string]string{"owner_id": testOwnerID.String(), "name": "x", stellarAddrKey: "G"}},
+		{"missing payout", map[string]string{"owner_id": testOwnerID.String(), "name": "x", baseURLKey: "x"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reqBody, _ := json.Marshal(tt.body)
+			reqBody, err := json.Marshal(tt.body)
+			if err != nil {
+				t.Fatalf("failed to marshal body: %v", err)
+			}
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
@@ -166,12 +178,15 @@ func TestCreateProvider_InvalidStellarAddress(t *testing.T) {
 	router := testRouter(h)
 
 	body := map[string]string{
-		"owner_id":               testOwnerID.String(),
-		"name":                   "My API",
-		"base_url":               "https://api.example.com",
-		"payout_stellar_address": "not-a-stellar-address",
+		"owner_id":     testOwnerID.String(),
+		"name":         "My API",
+		baseURLKey:     "https://api.example.com",
+		stellarAddrKey: "not-a-stellar-address",
 	}
-	reqBody, _ := json.Marshal(body)
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/providers", bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -357,7 +372,7 @@ func TestUpdateProvider_Success(t *testing.T) {
 			}, nil
 		},
 		updateProviderFn: func(_ context.Context, arg repository.UpdateProviderParams) error {
-			if arg.Name != "Updated API" {
+			if arg.Name != updatedAPIName {
 				t.Errorf("expected name 'Updated API', got %q", arg.Name)
 			}
 			if arg.BaseUrl != "https://api.example.com" {
@@ -369,8 +384,11 @@ func TestUpdateProvider_Success(t *testing.T) {
 	h := NewHandlers(mock)
 	router := testRouter(h)
 
-	body := map[string]string{"name": "Updated API"}
-	reqBody, _ := json.Marshal(body)
+	body := map[string]string{"name": updatedAPIName}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -407,10 +425,13 @@ func TestUpdateProvider_WithStellarAddress(t *testing.T) {
 	router := testRouter(h)
 
 	body := map[string]string{
-		"name":                   "Updated API",
-		"payout_stellar_address": testAddr,
+		"name":         updatedAPIName,
+		stellarAddrKey: testAddr,
 	}
-	reqBody, _ := json.Marshal(body)
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -440,8 +461,11 @@ func TestUpdateProvider_InvalidStellarAddress(t *testing.T) {
 	h := NewHandlers(mock)
 	router := testRouter(h)
 
-	body := map[string]string{"payout_stellar_address": "bad-address"}
-	reqBody, _ := json.Marshal(body)
+	body := map[string]string{stellarAddrKey: "bad-address"}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -465,8 +489,11 @@ func TestUpdateProvider_NotFound(t *testing.T) {
 	h := NewHandlers(mock)
 	router := testRouter(h)
 
-	body := map[string]string{"name": "Updated API"}
-	reqBody, _ := json.Marshal(body)
+	body := map[string]string{"name": updatedAPIName}
+	reqBody, err := json.Marshal(body)
+	if err != nil {
+		t.Fatalf("failed to marshal body: %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPatch, "/api/v1/providers/"+testProvID.String(), bytes.NewReader(reqBody))
 	req.Header.Set("Content-Type", "application/json")
