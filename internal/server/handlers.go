@@ -7,14 +7,17 @@ import (
 	"net/http"
 
 	"flowgate/internal/repository/db"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Handlers struct {
-	q repository.Querier
+	q    repository.Querier
+	pool *pgxpool.Pool
 }
 
-func NewHandlers(q repository.Querier) *Handlers {
-	return &Handlers{q: q}
+func NewHandlers(q repository.Querier, pool *pgxpool.Pool) *Handlers {
+	return &Handlers{q: q, pool: pool}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

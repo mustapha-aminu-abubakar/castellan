@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base32"
 	"encoding/json"
 	"errors"
@@ -44,7 +45,21 @@ func (h *Handlers) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provider, err := h.q.CreateProvider(r.Context(), repository.CreateProviderParams{
+	var commit func(context.Context) error
+	qtx := h.q
+	if h.pool != nil {
+		tx, err := h.pool.Begin(r.Context())
+		if err != nil {
+			slog.ErrorContext(r.Context(), "failed to begin transaction", slog.Any("error", err))
+			writeError(w, http.StatusInternalServerError, "failed to create provider")
+			return
+		}
+		defer tx.Rollback(r.Context())
+		qtx = repository.New(tx)
+		commit = tx.Commit
+	}
+
+	provider, err := qtx.CreateProvider(r.Context(), repository.CreateProviderParams{
 		OwnerID: ownerID,
 		Name:    input.Name,
 		BaseUrl: input.BaseURL,
@@ -55,13 +70,21 @@ func (h *Handlers) CreateProvider(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.q.UpdateUserPayoutAddress(r.Context(), repository.UpdateUserPayoutAddressParams{
+	if err := qtx.UpdateUserPayoutAddress(r.Context(), repository.UpdateUserPayoutAddressParams{
 		ID:                   ownerID,
 		PayoutStellarAddress: pgtype.Text{String: input.PayoutStellarAddress, Valid: true},
 	}); err != nil {
 		slog.ErrorContext(r.Context(), "failed to update payout address", slog.Any("error", err))
 		writeError(w, http.StatusInternalServerError, "failed to update payout address")
 		return
+	}
+
+	if commit != nil {
+		if err := commit(r.Context()); err != nil {
+			slog.ErrorContext(r.Context(), "failed to commit transaction", slog.Any("error", err))
+			writeError(w, http.StatusInternalServerError, "failed to create provider")
+			return
+		}
 	}
 
 	slog.DebugContext(r.Context(), "provider created", slog.String("provider_id", provider.ID.String()))

@@ -12,7 +12,7 @@ import (
 
 func (s *Server) RegisterRoutes() http.Handler {
 	r := httprouter.New()
-	h := NewHandlers(repository.New(s.pool))
+	h := NewHandlers(repository.New(s.pool), s.pool)
 
 	// Wrap all routes with CORS middleware
 	corsWrapper := s.corsMiddleware(r)

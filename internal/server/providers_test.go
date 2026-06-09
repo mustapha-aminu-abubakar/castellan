@@ -97,7 +97,7 @@ func TestCreateProvider_Success(t *testing.T) {
 			return nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{
@@ -138,7 +138,7 @@ func TestCreateProvider_Success(t *testing.T) {
 
 func TestCreateProvider_MissingFields(t *testing.T) {
 	mock := &mockQuerier{}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	tests := []struct {
@@ -174,7 +174,7 @@ func TestCreateProvider_MissingFields(t *testing.T) {
 
 func TestCreateProvider_InvalidStellarAddress(t *testing.T) {
 	mock := &mockQuerier{}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{
@@ -213,7 +213,7 @@ func TestGetProvider_Success(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers/"+testProvID.String(), nil)
@@ -242,7 +242,7 @@ func TestGetProvider_NotFound(t *testing.T) {
 			return repository.GetProviderByIDRow{}, pgx.ErrNoRows
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers/660e8400-e29b-41d4-a716-446655440001", nil)
@@ -259,7 +259,7 @@ func TestGetProvider_NotFound(t *testing.T) {
 
 func TestGetProvider_InvalidID(t *testing.T) {
 	mock := &mockQuerier{}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers/not-a-uuid", nil)
@@ -291,7 +291,7 @@ func TestListProviders_Success(t *testing.T) {
 			return expected, nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers?owner_id="+testOwnerID.String(), nil)
@@ -323,7 +323,7 @@ func TestListProviders_Empty(t *testing.T) {
 			return nil, nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers?owner_id="+testOwnerID.String(), nil)
@@ -345,7 +345,7 @@ func TestListProviders_Empty(t *testing.T) {
 
 func TestListProviders_MissingOwnerID(t *testing.T) {
 	mock := &mockQuerier{}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/providers", nil)
@@ -381,7 +381,7 @@ func TestUpdateProvider_Success(t *testing.T) {
 			return nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{"name": updatedAPIName}
@@ -421,7 +421,7 @@ func TestUpdateProvider_WithStellarAddress(t *testing.T) {
 			return nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{
@@ -458,7 +458,7 @@ func TestUpdateProvider_InvalidStellarAddress(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{stellarAddrKey: "bad-address"}
@@ -486,7 +486,7 @@ func TestUpdateProvider_NotFound(t *testing.T) {
 			return repository.GetProviderByIDRow{}, pgx.ErrNoRows
 		},
 	}
-	h := NewHandlers(mock)
+	h := NewHandlers(mock, nil)
 	router := testRouter(h)
 
 	body := map[string]string{"name": updatedAPIName}
