@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
 FROM golang:1.26-alpine
+RUN apk upgrade --no-cache libcrypto3 libssl3
 
 # Set destination for COPY
 WORKDIR /app

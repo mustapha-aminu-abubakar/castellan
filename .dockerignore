@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+dashboard/node_modules
+dashboard/.next
+dashboard/out
+coverage.html
+coverage.out
+bin
+*.md
+docs
