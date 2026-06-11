@@ -74,11 +74,11 @@ draft ──► active ◄──► inactive
 ### Command structure
 
 ```
-flowgate import [--provider-id <id> | --provider-name <name>] [flags] ./openapi.yaml
+castellan import [--provider-id <id> | --provider-name <name>] [flags] ./openapi.yaml
 
-flowgate login         # authenticate, store API key in ~/.flowgate/config
-flowgate providers     # list providers
-flowgate endpoints     # list endpoints for a provider
+castellan login         # authenticate, store API key in ~/.castellan/config
+castellan providers     # list providers
+castellan endpoints     # list endpoints for a provider
 ```
 
 ### Flags for `import`
@@ -110,8 +110,8 @@ Supports **OpenAPI 3.0 and 3.1** (JSON and YAML). Extracts:
 
 ### Authentication
 
-- `flowgate login` prompts for API key, stores it in `~/.flowgate/config`
-- All API calls include `Authorization: Bearer fg_xxxxx`
+- `castellan login` prompts for API key, stores it in `~/.castellan/config`
+- All API calls include `Authorization: Bearer ca_xxxxx`
 - The API key belongs to the user's account; providers are created under that user
 
 ### Implementation outline
@@ -228,5 +228,5 @@ ALTER TYPE endpoint_status ADD VALUE 'draft' BEFORE 'active';
 ## 6. Open questions
 
 1. **Auto-create provider from CLI?** — `--provider-name "My API"` creates a provider on the fly if it doesn't exist, or is `--provider-id` required?
-2. **How does the CLI get an API key?** — Does the user generate one from the Dashboard, or does `flowgate login` also handle registration (create user + key)?
+2. **How does the CLI get an API key?** — Does the user generate one from the Dashboard, or does `castellan login` also handle registration (create user + key)?
 3. **Public vs private endpoints** — "public" means the endpoint is enabled for routing, or does "public" mean it appears in a future marketplace/discovery feature?

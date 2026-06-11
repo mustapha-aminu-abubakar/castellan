@@ -7,11 +7,11 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: flowgate
+      POSTGRES_DB: castellan
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - flowgate
+      - castellan
 
   api:
     build:
@@ -23,14 +23,14 @@ services:
     environment:
       PORT: 8080
       APP_ENV: local
-      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/flowgate?sslmode=disable"
+      DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/castellan?sslmode=disable"
     depends_on:
       - postgres
     networks:
-      - flowgate
+      - castellan
 
 volumes:
   postgres_data:
 networks:
-  flowgate:
+  castellan:
     driver: bridge

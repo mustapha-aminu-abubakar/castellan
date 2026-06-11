@@ -1,13 +1,13 @@
 # PRD — Machine-Payable API Gateway Infrastructure
 
 ## Project Working Title
-FlowGate (working name)
+Castellan (working name)
 
 ---
 
 # 1. Executive Summary
 
-FlowGate is a developer-first infrastructure platform that enables usage-based API monetization through programmable micropayments and metered access.
+Castellan is a developer-first infrastructure platform that enables usage-based API monetization through programmable micropayments and metered access.
 
 The system allows API providers to:
 - monetize APIs per request,
@@ -476,7 +476,7 @@ Prevent unrestricted wallet spending.
 Target:
 
 ```bash
-flowgate wrap https://myapi.com
+castellan wrap https://myapi.com
 ```
 
 ### Drop-In Proxying
@@ -818,7 +818,7 @@ Avoid over-optimizing for speculative workflows.
 # 27. Recommended Initial Repository Structure
 
 ```text
-flowgate/
+castellan/
 ├── cmd/
 │   ├── gateway/
 │   ├── worker/

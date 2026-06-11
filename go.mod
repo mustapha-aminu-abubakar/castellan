@@ -1,4 +1,4 @@
-module flowgate
+module castellan
 
 go 1.26.1
 

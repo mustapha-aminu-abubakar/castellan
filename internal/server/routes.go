@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"flowgate/internal/repository/db"
+	"castellan/internal/repository/db"
 
 	"github.com/julienschmidt/httprouter"
 )

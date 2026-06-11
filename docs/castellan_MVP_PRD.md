@@ -1,4 +1,4 @@
-# FlowGate MVP PRD
+# Castellan MVP PRD
 ## Technical Product Requirements Document
 
 Version: 1.0
@@ -822,7 +822,7 @@ Run as independent worker service. Poll interval: ~5 seconds (Stellar finality i
 Providers register APIs through the dashboard UI. CLI-based bulk registration and OpenAPI spec sync are deferred to Phase 3.
 
 ### Pricing Configuration
-Providers set per-endpoint pricing (`price_amount`) and toggle public/private status in the dashboard. OpenAPI extensions (`x-flowgate-price`, `x-flowgate-public`) for one-shot setup via CLI are deferred to Phase 3.
+Providers set per-endpoint pricing (`price_amount`) and toggle public/private status in the dashboard. OpenAPI extensions (`x-castellan-price`, `x-castellan-public`) for one-shot setup via CLI are deferred to Phase 3.
 
 ### Usage Analytics
 ### Earnings Overview
@@ -944,7 +944,7 @@ Not required for MVP.
 # 14. Recommended Repository Structure
 
 ```text
-flowgate/
+castellan/
 ├── cmd/
 │   ├── gateway/
 │   ├── worker/

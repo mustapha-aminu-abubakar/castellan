@@ -59,7 +59,7 @@ export function DashboardShell({ children, role = "both" }: DashboardShellProps)
         <div className="flex h-14 items-center gap-2 border-b px-4">
           {!collapsed && (
             <Link href="/dashboard" className="text-lg font-bold tracking-tight">
-              <span className="text-primary">Flow</span>Gate
+              <span className="text-primary">Cast</span>ellan
             </Link>
           )}
           <Button
@@ -97,11 +97,11 @@ export function DashboardShell({ children, role = "both" }: DashboardShellProps)
         <div className="p-3">
           <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
             <Avatar className="h-8 w-8">
-              <AvatarFallback>FG</AvatarFallback>
+              <AvatarFallback>CA</AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 truncate">
-                <p className="text-sm font-medium truncate">user@flowgate.io</p>
+                <p className="text-sm font-medium truncate">user@castellan.io</p>
                 <p className="text-xs text-muted-foreground capitalize">{role}</p>
               </div>
             )}

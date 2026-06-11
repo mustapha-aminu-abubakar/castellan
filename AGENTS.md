@@ -1,4 +1,4 @@
-# FlowGate — Agent Guide
+# Castellan — Agent Guide
 
 ## Commands
 
@@ -21,7 +21,7 @@ goose -s -dir migrations create add_some_table sql
 
 ## Architecture
 
-- **Single module**: `flowgate` (go 1.26.1)
+- **Single module**: `castellan` (go 1.26.1)
 - **Entrypoint**: `cmd/api/main.go` — wires pool in main(), passes to `server.NewServer(pool)`
 - **HTTP router**: `github.com/julienschmidt/httprouter`
 - **DB driver**: `pgx/v5` via `pgxpool`
@@ -50,7 +50,7 @@ goose -s -dir migrations create add_some_table sql
 
 ## Linting Quirks
 
-- **gofumpt v0.9.2** bundled with golangci-lint v2.12. Config uses `module-path: flowgate` (single-level module name — gofumpt inside golangci-lint won't auto-detect it).
+- **gofumpt v0.9.2** bundled with golangci-lint v2.12. Config uses `module-path: castellan` (single-level module name — gofumpt inside golangci-lint won't auto-detect it).
 - **sloglint**: `attr-only: true` — use `slog.Any("key", val)`, not raw `"key", val` pairs. Context must be scoped, messages lowercased.
 - **revive**: all rules enabled. Config excludes magic-number and line-length.
 - **gosec**: `cmd/api/main.go` excluded for hardcoded credentials (DSN default).
