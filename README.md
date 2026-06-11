@@ -1,4 +1,4 @@
-# FlowGate
+# Castellan
 
 **Usage-based API monetization gateway** — metering, prepaid billing, and Stellar-powered settlement for developers.
 
@@ -6,13 +6,13 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://postgresql.org)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 ![Status](https://img.shields.io/badge/Status-MVP-yellow)
-[![codecov](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate/branch/main/graph/badge.svg)](https://codecov.io/gh/mustapha-aminu-abubakar/flowgate)
+[![codecov](https://codecov.io/gh/mustapha-aminu-abubakar/castellan/branch/main/graph/badge.svg)](https://codecov.io/gh/mustapha-aminu-abubakar/castellan)
 
 ---
 
-## What is FlowGate?
+## What is Castellan?
 
-FlowGate is a Go-based reverse proxy that sits in front of existing APIs and enables per-request monetization. Instead of forcing API providers into subscription models or Stripe billing, FlowGate handles authentication, request metering, prepaid balance validation, and batched Stellar settlement — all transparently to the end user.
+Castellan is a Go-based reverse proxy that sits in front of existing APIs and enables per-request monetization. Instead of forcing API providers into subscription models or Stripe billing, Castellan handles authentication, request metering, prepaid balance validation, and batched Stellar settlement — all transparently to the end user.
 
 Each request is priced, validated against a prepaid balance, recorded in an internal ledger, and aggregated for batched blockchain settlement. No per-request blockchain transactions. No subscription overhead. No payment infrastructure to build.
 
@@ -23,7 +23,7 @@ Each request is priced, validated against a prepaid balance, recorded in an inte
 ```
 Client
   ↓
-FlowGate Gateway
+Castellan Gateway
   ├── Auth Layer          → API key validation, consumer resolution
   ├── Metering Engine     → Per-request accounting
   ├── Pricing Engine      → Route-based cost resolution
@@ -69,7 +69,7 @@ Requests do **not** trigger blockchain transactions. Usage is aggregated in the 
 ## Project Structure
 
 ```
-flowgate/
+castellan/
 ├── cmd/
 │   └── api/              # Gateway HTTP server entrypoint
 ├── internal/
@@ -79,10 +79,11 @@ flowgate/
 ├── migrations/           # 11 goose migration files (sequential)
 ├── dashboard/            # Next.js 15 dashboard (12 pages, dark theme, shadcn/ui)
 ├── docs/                 # PRDs, schema docs, design analysis
-│   ├── flowgate_MVP_PRD.md
 │   ├── mvp_schema.md
 │   ├── mvp_erd.md
 │   ├── ui_spec.md
+│   ├── castellan_MVP_PRD.md
+│   ├── castellan_PRD.md
 │   └── db_design_analysis.md
 ├── docker-compose.yml    # Postgres, Redis, app services
 ├── Dockerfile            # Multi-stage Go build
@@ -162,14 +163,14 @@ See [`docs/mvp_schema.md`](docs/mvp_schema.md) for full DDL and [`docs/mvp_erd.m
 
 ```bash
 # Clone the repo
-git clone https://github.com/mustapha-aminu-abubakar/flowgate.git
-cd flowgate
+git clone https://github.com/mustapha-aminu-abubakar/castellan.git
+cd castellan
 
 # Start infrastructure
 docker compose up -d postgres redis
 
 # Run migrations
-goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/flowgate?sslmode=disable" up
+goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/castellan?sslmode=disable" up
 
 # Build and run gateway
 go run ./cmd/api
@@ -192,7 +193,7 @@ Environment variables (or `.env` file):
 
 | Variable | Default | Description |
 |---|---|---|
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/flowgate` | PostgreSQL connection |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/castellan` | PostgreSQL connection |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection |
 | `STELLAR_HORIZON` | `https://horizon-testnet.stellar.org` | Stellar network endpoint |
 | `GATEWAY_PORT` | `8080` | Gateway HTTP port |
@@ -221,7 +222,7 @@ GET /proxy/{provider}/{route}
 Authorization: Bearer fg_xxx
 ```
 
-Full specifications in [`docs/flowgate_MVP_PRD.md`](docs/flowgate_MVP_PRD.md).
+Full specifications in [`docs/castellan_MVP_PRD.md`](docs/castellan_MVP_PRD.md).
 
 ---
 

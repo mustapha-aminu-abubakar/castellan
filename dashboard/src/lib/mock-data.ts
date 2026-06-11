@@ -91,7 +91,7 @@ export const MOCK_PROVIDERS: Provider[] = [
   {
     id: "prov-1",
     name: "Weather API",
-    baseUrl: "https://api.flowgate.io/weather",
+    baseUrl: "https://api.castellan.io/weather",
     status: "active",
     createdAt: "2025-01-15",
     endpoints: [
@@ -103,7 +103,7 @@ export const MOCK_PROVIDERS: Provider[] = [
   {
     id: "prov-2",
     name: "Geolocation Service",
-    baseUrl: "https://api.flowgate.io/geo",
+    baseUrl: "https://api.castellan.io/geo",
     status: "active",
     createdAt: "2025-02-20",
     endpoints: [
@@ -114,7 +114,7 @@ export const MOCK_PROVIDERS: Provider[] = [
   {
     id: "prov-3",
     name: "AI Text Processing",
-    baseUrl: "https://api.flowgate.io/ai",
+    baseUrl: "https://api.castellan.io/ai",
     status: "active",
     createdAt: "2025-03-10",
     endpoints: [
@@ -152,9 +152,9 @@ export const MOCK_USAGE_EVENTS: UsageEvent[] = [
 ]
 
 export const MOCK_API_KEYS: ApiKey[] = [
-  { id: "ak-1", label: "Production", prefix: "fg_prod_", status: "active", createdAt: "2025-01-15" },
-  { id: "ak-2", label: "Staging", prefix: "fg_stag_", status: "active", createdAt: "2025-02-20" },
-  { id: "ak-3", label: "Development", prefix: "fg_dev_", status: "revoked", createdAt: "2025-03-10" },
+  { id: "ak-1", label: "Production", prefix: "ca_prod_", status: "active", createdAt: "2025-01-15" },
+  { id: "ak-2", label: "Staging", prefix: "ca_stag_", status: "active", createdAt: "2025-02-20" },
+  { id: "ak-3", label: "Development", prefix: "ca_dev_", status: "revoked", createdAt: "2025-03-10" },
 ]
 
 export const MOCK_ANALYTICS = {
@@ -177,9 +177,9 @@ export const MOCK_ANALYTICS = {
 }
 
 export const MOCK_SETTINGS = {
-  email: "user@flowgate.io",
+  email: "user@castellan.io",
   role: "both" as const,
   stellarAddress: "GBRFXKQH45J6X7K8L9M0N1P2Q3R4S5T6U7V8W9X0Y",
-  depositMemo: "flowgate-deposit-memo-001",
+  depositMemo: "castellan-deposit-memo-001",
   depositInstructions: "Send any XLM amount to the address above with the memo text. Funds will be credited within 30 seconds of network confirmation.",
 }

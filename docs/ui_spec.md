@@ -1,4 +1,4 @@
-# FlowGate — UI Specification
+# Castellan — UI Specification
 
 Designed for AI-assisted generation (OpenDesign, Claude Design, v0, etc.).
 
@@ -6,7 +6,7 @@ Designed for AI-assisted generation (OpenDesign, Claude Design, v0, etc.).
 
 ## 1. Product Overview
 
-FlowGate is a developer platform that lets API providers charge per request instead of subscriptions. It acts as a reverse proxy handling auth, metering, and prepaid billing backed by Stellar blockchain settlement.
+Castellan is a developer platform that lets API providers charge per request instead of subscriptions. It acts as a reverse proxy handling auth, metering, and prepaid billing backed by Stellar blockchain settlement.
 
 **Two user roles:**
 - **Provider** — owns APIs, sets pricing, receives payouts
@@ -554,7 +554,7 @@ Generate new key dialog:
   "balance": "0.50",
   "request_cost": "0.0001",
   "message": "Your prepaid balance is too low to process this request. Please deposit funds.",
-  "deposit_url": "https://app.flowgate.io/dashboard/deposit"
+  "deposit_url": "https://app.castellan.io/dashboard/deposit"
 }
 ```
 

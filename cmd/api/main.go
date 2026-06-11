@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"flowgate/internal/server"
+	"castellan/internal/server"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -19,7 +19,7 @@ import (
 func newPool(ctx context.Context) (*pgxpool.Pool, error) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://flowgate:flowgate@localhost:5432/flowgate?sslmode=disable"
+		dsn = "postgres://castellan:castellan@localhost:5432/castellan?sslmode=disable"
 	}
 
 	config, err := pgxpool.ParseConfig(dsn)

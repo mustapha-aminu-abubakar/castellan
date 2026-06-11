@@ -79,7 +79,7 @@ export default function DepositPage() {
                     <p className="text-sm font-medium text-muted-foreground">Deposit Memo</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 rounded-lg bg-muted px-3 py-2 text-sm font-mono">
-                        flowgate-deposit-memo-001
+castellan-deposit-memo-001
                       </code>
                       <CopyButton text="flowgate-deposit-memo-001" />
                     </div>
