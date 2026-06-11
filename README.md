@@ -10,11 +10,86 @@
 
 ---
 
-## What is FlowGate?
+## Why Castellan?
 
-FlowGate is a Go-based reverse proxy that sits in front of existing APIs and enables per-request monetization. Instead of forcing API providers into subscription models or Stripe billing, FlowGate handles authentication, request metering, prepaid balance validation, and batched Stellar settlement — all transparently to the end user.
+Today, every API provider that wants to charge per-request either builds a custom billing system, forces users into rigid subscriptions, or just gives it away for free. Subscription billing means overpaying or underutilizing. Stripe overhead kills small APIs. And there's no infrastructure for machine-to-machine payments — APIs can't pay each other, and AI agents have no way to transact economically.
 
-Each request is priced, validated against a prepaid balance, recorded in an internal ledger, and aggregated for batched blockchain settlement. No per-request blockchain transactions. No subscription overhead. No payment infrastructure to build.
+Castellan standardizes that layer:
+
+- **Per-request pricing** — each endpoint has a fixed cost. No subscriptions, no tiers, no surprises.
+- **Prepaid balances** — consumers fund an internal wallet. The gateway checks balance on every request, deducts in real time.
+- **Batched Stellar settlement** — usage aggregates in an internal ledger. Provider payouts are batched and settled on Stellar. No per-request blockchain transactions.
+- **Zero billing infrastructure** — providers don't build invoicing, reconciliation, or payout systems. Castellan handles it.
+
+---
+
+## What We're Building
+
+### 1. Go Reverse Proxy Gateway
+
+The core request lifecycle: authenticate, price, validate balance, forward, meter, deduct. All in a single Go binary using `httputil.ReverseProxy`.
+
+**Key deliverables:**
+- API key authentication with hashed bearer tokens
+- Route-based pricing resolution
+- Prepaid balance validation per request
+- Request forwarding with header injection and timeouts
+- Structured JSON logging with correlation IDs
+- Usage event persistence (idempotent, auditable)
+
+### 2. Prepaid Ledger Engine
+
+Internal accounting system that tracks balances, reservations, deductions, and refunds — without touching the blockchain on every request.
+
+**Key deliverables:**
+- Balance management with fast local reads
+- Temporary fund reservations during request execution
+- Atomic deduction flow (reserve → forward → commit)
+- Automatic refunds on upstream failures
+- Immutable ledger entry audit trail
+
+### 3. Stellar Settlement Infrastructure
+
+Batched provider payouts over the Stellar network. A deposit watcher monitors incoming payments and credits internal balances. A settlement worker aggregates earnings and executes batched transfers.
+
+**Key deliverables:**
+- SEP-7 QR code deposit flow (destination + memo auto-filled in wallet)
+- Deposit watcher polling Stellar Horizon every ~5s
+- Settlement batch creation and Stellar transaction execution
+- Provider payout reconciliation
+- Memo-based payment routing
+
+### 4. Background Workers
+
+Independent Go services that handle async operations without blocking the gateway.
+
+**Key deliverables:**
+- Settlement worker — aggregate earnings, create batches, submit Stellar txs
+- Deposit watcher — monitor incoming payments, credit balances
+- Usage aggregator — prepare provider settlement data
+
+### 5. Next.js Dashboard
+
+A full-featured dashboard for both providers and consumers, built with Next.js 15 and shadcn/ui.
+
+**Key deliverables:**
+- Provider dashboard — API registration, pricing configuration, usage analytics, earnings overview, settlement history
+- Consumer dashboard — wallet balance, deposit flow with SEP-7 QR code, usage history, API consumption logs
+- Role-aware sidebar adapting nav items for Provider, Consumer, or Both
+
+---
+
+## MVP Scope
+
+| In scope | Deferred |
+|---|---|
+| Fixed per-request pricing | Dynamic / usage-based pricing |
+| API key authentication | OAuth, JWTs, capability tokens |
+| Internal prepaid ledger | On-chain balance reads |
+| Batched Stellar settlement | USDC, multi-chain |
+| SEP-7 QR deposits | Streaming payments |
+| Redis rate limiting | Advanced analytics |
+| Provider + Consumer dashboards | AI-agent wallets, marketplaces |
 
 ---
 
@@ -23,12 +98,11 @@ Each request is priced, validated against a prepaid balance, recorded in an inte
 ```
 Client
   ↓
-FlowGate Gateway
-  ├── Auth Layer          → API key validation, consumer resolution
+Castellan Gateway
+  ├── Auth Layer          → API key validation
   ├── Metering Engine     → Per-request accounting
   ├── Pricing Engine      → Route-based cost resolution
   ├── Ledger Service      → Balance mgmt, reservations, deductions
-  ├── Usage Logger        → Structured JSON logging
   └── Proxy Engine        → httputil.ReverseProxy forwarding
   ↓
 Provider API
@@ -37,16 +111,65 @@ Background Workers
   ├── Settlement Worker   → Aggregate earnings, execute Stellar payouts
   ├── Deposit Watcher     → Monitor Stellar for incoming payments
   └── Usage Aggregator    → Prepare provider settlement data
-
-Databases
-  ├── PostgreSQL          → Users, providers, pricing, ledger, usage events
-  └── Redis               → Rate limiting, temporary reservations, cache
-
-Blockchain Layer
-  └── Stellar Network     → Deposit routing, batched settlement payouts
 ```
 
-Requests do **not** trigger blockchain transactions. Usage is aggregated in the internal ledger and settled to Stellar in batches.
+Blockchain transactions happen in **batches**, not per request. Usage aggregates in the internal ledger; Stellar settlement runs asynchronously.
+
+---
+
+## Quick Start
+
+```bash
+# Prerequisites: Go 1.26+, Docker & Docker Compose
+
+# Clone and start infrastructure
+git clone https://github.com/mustapha-aminu-abubakar/castellan.git
+cd castellan
+docker compose up -d postgres redis
+
+# Run migrations
+goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/castellan?sslmode=disable" up
+
+# Start gateway
+go run ./cmd/api
+```
+
+**Dashboard:**
+```bash
+cd dashboard
+npm install
+npm run dev    # → http://localhost:3000
+```
+
+---
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `make build` | Build to `main.exe` |
+| `make test` | Full test suite (`go test -race -count=1 ./...`) |
+| `make watch` | Live reload via `air` |
+| `make run` | Run the API server |
+
+See [`AGENTS.md`](AGENTS.md) for the full command reference.
+
+---
+
+## Project Structure
+
+```
+castellan/
+├── cmd/api/               # Gateway HTTP server entrypoint
+├── internal/
+│   ├── repository/        # sqlc queries + generated Go
+│   └── server/            # HTTP server, routes, handlers
+├── migrations/            # goose migration files
+├── dashboard/             # Next.js 15 frontend
+├── docs/                  # PRDs, schema docs, design analysis
+├── docker-compose.yml     # Postgres + Redis + app
+└── Dockerfile             # Go build image
+```
 
 ---
 
@@ -56,205 +179,33 @@ Requests do **not** trigger blockchain transactions. Usage is aggregated in the 
 |---|---|
 | Gateway | Go (`net/http`, `httputil.ReverseProxy`) |
 | Database | PostgreSQL 16 + Redis 7 |
-| Settlement | Stellar Network (XLM, future USDC) |
-| Dashboard | Next.js 15, Tailwind CSS, shadcn/ui, recharts, QRCode.react |
-| Workers | Go background services (polling, timers) |
-| Containerization | Docker Compose |
-| Observability | Prometheus, Grafana, OpenTelemetry |
-| Migrations | goose |
+| Settlement | Stellar Network |
+| Dashboard | Next.js 15, Tailwind CSS, shadcn/ui |
 | Query Layer | sqlc (type-safe Go from SQL) |
+| Migrations | goose |
 
 ---
 
-## Project Structure
+## Philosophy
 
-```
-flowgate/
-├── cmd/
-│   └── api/              # Gateway HTTP server entrypoint
-├── internal/
-│   ├── repository/       # sqlc queries + generated Go code
-│   │   └── query/        # 10 .sql files, 48 queries
-│   └── server/           # HTTP server, routes, handlers
-├── migrations/           # 11 goose migration files (sequential)
-├── dashboard/            # Next.js 15 dashboard (12 pages, dark theme, shadcn/ui)
-├── docs/                 # PRDs, schema docs, design analysis
-│   ├── flowgate_MVP_PRD.md
-│   ├── mvp_schema.md
-│   ├── mvp_erd.md
-│   ├── ui_spec.md
-│   └── db_design_analysis.md
-├── docker-compose.yml    # Postgres, Redis, app services
-├── Dockerfile            # Multi-stage Go build
-└── Makefile              # Build, test, watch targets
-```
+**Usage billing should be infrastructure, not a feature.** Castellan treats API monetization the way Stripe treats payments — as a standardized, pluggable layer that developers shouldn't have to build themselves.
 
-> **Note:** The architecture above describes the target design. Business-logic packages (`auth/`, `ledger/`, `metering/`, `pricing/`, `settlement/`, `wallet/`, `worker/`) are actively being extracted from `internal/server/` as the codebase evolves from MVP toward production.
-
----
-
-## Database
-
-10 PostgreSQL tables:
-
-```mermaid
-erDiagram
-    users ||--o{ api_keys : "has"
-    users ||--o{ providers : "owns"
-    users ||--o| accounts : "has"
-    users ||--o{ usage_events : "consumes"
-    providers ||--o{ api_endpoints : "exposes"
-    providers ||--o{ usage_events : "metered"
-    providers ||--o{ settlement_entries : "payouts"
-    accounts ||--o{ ledger_entries : "audit"
-    accounts ||--o{ deposits : "funds"
-    api_endpoints ||--o{ usage_events : "billed"
-    settlement_batches ||--o{ settlement_entries : "contains"
-```
-
-| Table | Purpose |
-|---|---|
-| `users` | Core identity, role (`provider`, `consumer`, or `both`), deposit memo, payout address |
-| `api_keys` | Hashed bearer tokens for auth |
-| `providers` | Upstream API configuration |
-| `api_endpoints` | Routes with fixed per-request pricing |
-| `accounts` | Internal prepaid credit (fast auth, not on-chain) |
-| `ledger_entries` | Immutable audit trail for all financial ops |
-| `usage_events` | Per-request metering records (idempotent) |
-| `deposits` | Incoming Stellar payment tracking |
-| `settlement_batches` | Grouped payout transactions |
-| `settlement_entries` | Per-provider payout line items |
-
-See [`docs/mvp_schema.md`](docs/mvp_schema.md) for full DDL and [`docs/mvp_erd.md`](docs/mvp_erd.md) for the ERD.
-
----
-
-## Screenshots
-
-<p align="center">
-  <img src="docs/screenshots/overview.png" alt="Provider Overview" width="700">
-  <br><em>Provider dashboard — earnings overview, 7-day chart, recent API calls</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/analytics.png" alt="Analytics" width="700">
-  <br><em>Usage analytics — stacked request timeline and endpoint revenue breakdown</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/deposits.png" alt="Deposit" width="700">
-  <br><em>Consumer deposit screen — SEP-7 QR code, address/memo copy, deposit history</em>
-</p>
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Go 1.26+
-- Docker & Docker Compose
-- PostgreSQL 16 (or via Docker)
-- Redis 7 (or via Docker)
-- Stellar testnet account (for development)
-
-### Setup
-
-```bash
-# Clone the repo
-git clone https://github.com/mustapha-aminu-abubakar/flowgate.git
-cd flowgate
-
-# Start infrastructure
-docker compose up -d postgres redis
-
-# Run migrations
-goose -s -dir migrations postgres "postgres://postgres:postgres@localhost:5432/flowgate?sslmode=disable" up
-
-# Build and run gateway
-go run ./cmd/api
-```
-
-### Dashboard
-
-```bash
-cd dashboard
-npm install
-npm run dev      # → http://localhost:3000
-```
-
-The dashboard runs independently — mock data is used until the Go API is running.  
-Role toggle supports all three options: **Provider**, **Consumer**, or **Both** — the sidebar adapts nav items per role.
-
-### Configuration
-
-Environment variables (or `.env` file):
-
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/flowgate` | PostgreSQL connection |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection |
-| `STELLAR_HORIZON` | `https://horizon-testnet.stellar.org` | Stellar network endpoint |
-| `GATEWAY_PORT` | `8080` | Gateway HTTP port |
-| `WALLET_SECRET_KEY` | — | Stellar secret key for deposit wallet |
-
----
-
-## API Overview
-
-Management endpoints (dashboard consumes these):
-
-```
-POST   /providers                     # Register a provider
-GET    /providers/:id                 # Get provider details
-POST   /providers/:id/endpoints       # Add an endpoint with pricing
-GET    /endpoints/:id                 # Get endpoint details
-POST   /wallet/deposit                # Request deposit address + SEP-7 URI
-GET    /wallet/balance                # Get prepaid balance
-GET    /usage                         # List usage events
-```
-
-Proxy endpoint (consumer-facing):
-
-```
-GET /proxy/{provider}/{route}
-Authorization: Bearer fg_xxx
-```
-
-Full specifications in [`docs/flowgate_MVP_PRD.md`](docs/flowgate_MVP_PRD.md).
-
----
-
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| **accounts vs on-chain balance** | Gateway reads internal `accounts.balance` per request — never queries Stellar. Stellar wallet refs inlined on `users` table. |
-| **balance_after on ledger_entries** | O(1) balance lookups and built-in consistency checking without summing full history. |
-| **request_id on usage_events** | Idempotency key prevents double-billing on retry (Stripe-style). |
-| **Batched settlement** | One Stellar transaction per batch, not per request. Keeps latency low and costs minimal. |
-| **SEP-7 QR deposits** | Stellar URI scheme auto-fills destination + memo in compatible wallets, eliminating the #1 deposit failure mode. |
-| **Polymorphic ledger refs** | `reference_id` + `reference_type` avoids three nullable FK columns per entry. |
-| **sqlc over ORM** | Type-safe Go code generated from SQL. No runtime reflection, no N+1 queries, full control over join patterns. |
+- **Transactions off the critical path** — the blockchain is the settlement layer, not the request path. Speed and cost stay predictable.
+- **Honest scope** — this doesn't solve identity, reputation, or discovery. It solves metering, billing, and settlement. Each provider defines their trust model.
+- **Machine-payable by design** — the architecture is built for APIs and eventually AI agents to transact economically without human intervention.
+- **Pragmatic layering** — use the database for speed (balance checks, usage queries) and the chain for what it's good at (immutable settlement, transparent payouts).
 
 ---
 
 ## Contributing
 
-PRs are welcome. This is an early-stage MVP — code churn is expected.
+PRs welcome. This is an early-stage MVP — code churn is expected.
 
 ```bash
-# Run tests
 make test
-
-# Regenerate sqlc code after query changes
-cd internal/repository && sqlc generate && cd ../..
-
-# Create a new migration
-goose -s -dir migrations create add_some_table sql
 ```
 
-See [`docs/db_design_analysis.md`](docs/db_design_analysis.md) for known risks and design tradeoffs before making schema changes.
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/`](docs/) for design context before making schema changes.
 
 ---
 
